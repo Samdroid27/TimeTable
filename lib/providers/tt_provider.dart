@@ -10,7 +10,7 @@ class TTProvider with ChangeNotifier{
   List<HrSlot> get items {
     return [..._items];
   }
-   Future<void> fetchAndSetPlaces() async {
+   Future<void> fetchAndSetSlot() async {
     final dataList = await DBHelper.getData('tt');
     _items = dataList.map((item)=> HrSlot(
      item['hr'],
