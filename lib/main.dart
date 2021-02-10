@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:rxdart/subjects.dart';
@@ -34,7 +32,6 @@ class ReceivedNotification {
       @required this.payload});
 }
 
-
 Future<void> main() async {
   // needed if you intend to initialize in the `main` function
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,24 +56,15 @@ Future<void> main() async {
     }
     selectNotificationSubject.add(payload);
   });
-  runApp(
-    MyApp()
-  );
+  runApp(MyApp());
 }
-
-
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
-      value:TTProvider() ,
-          child: MaterialApp(
-        home: TTScreen()
-      ),
+      value: TTProvider(),
+      child: MaterialApp(home: TTScreen()),
     );
   }
 }
-
-
-

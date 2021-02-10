@@ -14,11 +14,9 @@ class TTScreen extends StatefulWidget {
 }
 
 class _TTScreenState extends State<TTScreen> {
-
   var _isNotificationOn = false;
-  
 
-   final MethodChannel platform =
+  final MethodChannel platform =
       MethodChannel('crossingthestreams.io/resourceResolver');
 
   @override
@@ -44,9 +42,8 @@ class _TTScreenState extends State<TTScreen> {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                      SecondScreen(receivedNotification.title)
-                  ),
+                      builder: (context) =>
+                          SecondScreen(receivedNotification.title)),
                 );
               },
             )
@@ -61,20 +58,15 @@ class _TTScreenState extends State<TTScreen> {
       );
     });
     checkNotify();
-    
   }
 
-
-  Future<void> checkNotify() async{
+  Future<void> checkNotify() async {
     var notifications = await _checkPendingNotificationRequests();
-    if (notifications > 0){
+    if (notifications > 0) {
       _isNotificationOn = true;
-    }
-    else
-    {
+    } else {
       _isNotificationOn = false;
     }
-    
   }
 
   @override
@@ -97,39 +89,91 @@ class _TTScreenState extends State<TTScreen> {
 
   @override
   Widget build(BuildContext context) {
-    
     return Scaffold(
       appBar: AppBar(
         title: Text('Time Table'),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.cached),
-            onPressed: ()=> reset(context),
+            onPressed: () => showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text('Are you Sure?'),
+                content: Text(
+                  'Do you want to clear all Entries?',
+                  softWrap: true,
+                ),
+                actions: <Widget>[
+                  FlatButton(
+                    child: Text('NO'),
+                    onPressed: () {
+                      Navigator.of(context).pop(false);
+                    },
+                  ),
+                  FlatButton(
+                    child: Text('YES'),
+                    onPressed: () {
+                      reset(context);
+                      Navigator.of(context).pop(true);
+                    },
+                  )
+                ],
+              ),
+            ),
           )
         ],
       ),
       body: SingleChildScrollView(
-              child: Column(
+        child: Column(
           children: <Widget>[
-            
-             FutureBuilder(
-               future: checkNotify(),
-                 builder: (ctx,snapshot)=>SwitchListTile(
-                 title: Text('Notification for classes'),
-                 value:_isNotificationOn ,
-                 onChanged: (newVal){
-                   _isNotificationOn= newVal;
-                   if(newVal == true){                 
-                     _onNotification(context);
-                     _checkPendingNotificationRequests();
-                   }
-                   if (newVal ==false){
-                     _cancelAllNotifications();
-                   }
-                 },
-               ),
-             ),   
-            TimeTableDisplay(),
+            Container(
+              decoration: BoxDecoration(
+                  color: Color.fromRGBO(215, 117, 255, 1).withOpacity(0.5)),
+              child: FutureBuilder(
+                future: checkNotify(),
+                builder: (ctx, snapshot) => SwitchListTile(
+                  title: Text('Notification for classes'),
+                  value: _isNotificationOn,
+                  onChanged: (newVal) {
+                    _isNotificationOn = newVal;
+                    if (newVal == true) {
+                      _onNotification(context);
+                      _checkPendingNotificationRequests();
+                    }
+                    if (newVal == false) {
+                      _cancelAllNotifications();
+                    }
+                  },
+                ),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color.fromRGBO(215, 117, 255, 1).withOpacity(0.5),
+                    Color.fromRGBO(255, 188, 117, 1).withOpacity(0.9),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  stops: [0, 1],
+                ),
+              ),
+              child: TimeTableDisplay(),
+            ),
+            Container(
+              height: 150,
+              width: double.infinity,
+              color: Color.fromRGBO(255, 188, 117, 1).withOpacity(0.3),
+              child: Center(
+                child: Text(
+                  'TIME TABLE ',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
           ],
         ),
       ),
@@ -137,65 +181,60 @@ class _TTScreenState extends State<TTScreen> {
   }
 }
 
+Future<void> _cancelAllNotifications() async {
+  await flutterLocalNotificationsPlugin.cancelAll();
+}
 
-
-   Future<void> _cancelAllNotifications() async {
-    await flutterLocalNotificationsPlugin.cancelAll();
+Future<int> _checkPendingNotificationRequests() async {
+  var pendingNotificationRequests =
+      await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+  for (var pendingNotificationRequest in pendingNotificationRequests) {
+    debugPrint(
+        'pending notification: [id: ${pendingNotificationRequest.id}, title: ${pendingNotificationRequest.title}, body: ${pendingNotificationRequest.body}, payload: ${pendingNotificationRequest.payload}]');
   }
+  return pendingNotificationRequests.length;
+}
 
- Future<int> _checkPendingNotificationRequests() async {
-    var pendingNotificationRequests =
-        await flutterLocalNotificationsPlugin.pendingNotificationRequests();
-    for (var pendingNotificationRequest in pendingNotificationRequests) {
-      debugPrint(
-          'pending notification: [id: ${pendingNotificationRequest.id}, title: ${pendingNotificationRequest.title}, body: ${pendingNotificationRequest.body}, payload: ${pendingNotificationRequest.payload}]');
+Future<void> _showWeeklyAtDayAndTime(
+    int hr, Day day, String course, int id) async {
+  var time = Time(hr + 2, 53, 0);
+  var androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      'show weekly channel id',
+      'show weekly channel name',
+      'show weekly description');
+  var iOSPlatformChannelSpecifics = IOSNotificationDetails();
+  var platformChannelSpecifics = NotificationDetails(
+      androidPlatformChannelSpecifics, iOSPlatformChannelSpecifics);
+  await flutterLocalNotificationsPlugin.showWeeklyAtDayAndTime(
+      id, course, 'Class in 10 min', day, time, platformChannelSpecifics);
+}
+
+void _onNotification(BuildContext context) {
+  final items = Provider.of<TTProvider>(context).items;
+  [...items].forEach((slot) {
+    if (slot.mon != "") {
+      _showWeeklyAtDayAndTime(slot.hr, Day.Monday, slot.mon, slot.hr * 10 + 1);
     }
-    return pendingNotificationRequests.length;
-  }
-
-
- Future<void> _showWeeklyAtDayAndTime(int hr ,Day day, String course,int id) async {
-    var time = Time(hr-1, 50, 0);
-    var androidPlatformChannelSpecifics = AndroidNotificationDetails(
-        'show weekly channel id',
-        'show weekly channel name',
-        'show weekly description');
-    var iOSPlatformChannelSpecifics = IOSNotificationDetails();
-    var platformChannelSpecifics = NotificationDetails(
-        androidPlatformChannelSpecifics, iOSPlatformChannelSpecifics);
-    await flutterLocalNotificationsPlugin.showWeeklyAtDayAndTime(
-        id,
-        course,
-        'Class in 10 min',
-        day,
-        time,
-        platformChannelSpecifics);
-  }
-
-  void _onNotification(BuildContext context){
-    final items= Provider.of<TTProvider>(context).items;
-   [...items].forEach((slot){
-      if(slot.mon != ""){
-        _showWeeklyAtDayAndTime(slot.hr, Day.Monday,slot.mon,slot.hr*10+1);
-      }
-      if(slot.tue != ""){
-        _showWeeklyAtDayAndTime(slot.hr, Day.Tuesday,slot.tue,slot.hr*10+2);
-      }
-      if(slot.wed != ""){
-        _showWeeklyAtDayAndTime(slot.hr, Day.Wednesday,slot.wed,slot.hr*10+3);
-      }
-      if(slot.thu != ""){
-        _showWeeklyAtDayAndTime(slot.hr, Day.Thursday,slot.thu,slot.hr*10+4);
-      }
-      if(slot.fri != ""){
-        _showWeeklyAtDayAndTime(slot.hr, Day.Friday,slot.fri,slot.hr*10+5);
-      }
-      if(slot.sat != ""){
-        _showWeeklyAtDayAndTime(slot.hr, Day.Saturday,slot.sat,slot.hr*10+6);
-      }
-    });
-  }
-
+    if (slot.tue != "") {
+      _showWeeklyAtDayAndTime(slot.hr, Day.Tuesday, slot.tue, slot.hr * 10 + 2);
+    }
+    if (slot.wed != "") {
+      _showWeeklyAtDayAndTime(
+          slot.hr, Day.Wednesday, slot.wed, slot.hr * 10 + 3);
+    }
+    if (slot.thu != "") {
+      _showWeeklyAtDayAndTime(
+          slot.hr, Day.Thursday, slot.thu, slot.hr * 10 + 4);
+    }
+    if (slot.fri != "") {
+      _showWeeklyAtDayAndTime(slot.hr, Day.Friday, slot.fri, slot.hr * 10 + 5);
+    }
+    if (slot.sat != "") {
+      _showWeeklyAtDayAndTime(
+          slot.hr, Day.Saturday, slot.sat, slot.hr * 10 + 6);
+    }
+  });
+}
 
 class SecondScreen extends StatefulWidget {
   SecondScreen(this.payload);
